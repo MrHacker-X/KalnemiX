@@ -1,0 +1,26 @@
+# --- python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# --- recon output ---
+index.html
+reverse-shell.php
+*.log
+*.txt.recon
+
+# --- os junk ---
+.DS_Store
+Thumbs.db
+
+# --- editors / ide ---
+.vscode/
+.idea/
+*.swp
+*~
+ 

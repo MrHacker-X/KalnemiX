@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hacked By {{NAME}}</title>
+<style>
+  :root{
+    --grn:#00ff41; --grn-dim:#00b32d; --red:#ff2a2a; --txt:#e8ffe8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:#000; color:var(--txt); overflow:hidden;
+    font-family:'Courier New',Courier,monospace;
+  }
+  #mx{position:fixed;inset:0;z-index:0;opacity:.35}
+  .scan{
+    position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 2px,transparent 2px 4px);
+  }
+  main{
+    position:relative;z-index:2;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:24px;
+  }
+  .logo{
+    width:110px;height:110px;border-radius:50%;object-fit:cover;
+    border:2px solid var(--grn-dim);
+    box-shadow:0 0 18px rgba(0,255,65,.45),inset 0 0 12px rgba(0,255,65,.25);
+    margin-bottom:26px;background:#020802;
+  }
+  h1.glitch{
+    position:relative;color:var(--grn);
+    font-size:clamp(52px,11vw,110px);font-weight:900;letter-spacing:.08em;
+    line-height:1;text-shadow:0 0 14px rgba(0,255,65,.55);
+    margin-bottom:10px;user-select:none;
+  }
+  h1.glitch::before,h1.glitch::after{
+    content:attr(data-text);position:absolute;inset:0;
+  }
+  h1.glitch::before{
+    color:var(--red);z-index:-1;
+    animation:gl1 2.4s infinite steps(2,end);
+  }
+  h1.glitch::after{
+    color:#2affea;z-index:-2;
+    animation:gl2 3.1s infinite steps(2,end);
+  }
+  @keyframes gl1{
+    0%,86%,100%{transform:none;opacity:.0}
+    87%{transform:translate(-4px,2px);opacity:.85}
+    90%{transform:translate(3px,-2px);opacity:.85}
+    93%{transform:translate(-2px,1px);opacity:.85}
+    96%{transform:none;opacity:0}
+  }
+  @keyframes gl2{
+    0%,80%,100%{transform:none;opacity:0}
+    81%{transform:translate(4px,-2px);opacity:.7}
+    85%{transform:translate(-3px,2px);opacity:.7}
+    89%{transform:translate(2px,1px);opacity:.7}
+    93%{transform:none;opacity:0}
+  }
+  h2{
+    color:#fff;font-size:clamp(17px,3vw,26px);font-weight:700;
+    letter-spacing:.14em;text-transform:uppercase;margin-bottom:26px;
+  }
+  h2 .who{color:var(--red);text-shadow:0 0 12px rgba(255,42,42,.6)}
+  .msg{
+    color:var(--grn);max-width:56ch;font-size:clamp(14px,2vw,17px);
+    line-height:1.7;margin-bottom:26px;
+    text-shadow:0 0 8px rgba(0,255,65,.35);
+  }
+  .line{
+    width:150px;height:1px;margin-bottom:22px;
+    background:linear-gradient(90deg,transparent,var(--grn),transparent);
+  }
+  .contact{color:#fff;font-size:15px;letter-spacing:.06em;margin-bottom:8px;word-break:break-word}
+  .contact2{color:var(--grn-dim);font-size:13px;letter-spacing:.06em;margin-bottom:22px;word-break:break-word}
+  .tag{
+    color:#9effb0;font-size:12px;letter-spacing:.4em;text-transform:uppercase;
+    margin-bottom:34px;
+  }
+  .root{color:#7dff9b;font-size:13px}
+  .cursor{
+    display:inline-block;width:9px;height:15px;background:var(--grn);
+    vertical-align:middle;margin-left:4px;
+    animation:blink 1s steps(1) infinite;
+  }
+  @keyframes blink{50%{opacity:0}}
+</style>
+</head>
+<body>
+<canvas id="mx"></canvas>
+<div class="scan"></div>
+<main>
+  <img class="logo" src="{{LOGO}}" alt="logo">
+  <h1 class="glitch" data-text="HACKED">HACKED</h1>
+  <h2>Hacked By <span class="who">{{NAME}}</span></h2>
+  <p class="msg">{{MESSAGE}}.</p>
+  <div class="line"></div>
+  <p class="contact">{{CONTACT}}</p>
+  <p class="contact2">{{SOCIAL}}</p>
+  <p class="tag">{{TAGLINE}}</p>
+  <p class="root">root@localhost:~# <span class="cursor"></span></p>
+</main>
+<script>
+(function () {
+  var c = document.getElementById('mx'), x = c.getContext('2d');
+  var cols, drops;
+  var glyphs = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ0123456789ABCDEF$#@%&';
+  function size() {
+    c.width = innerWidth; c.height = innerHeight;
+    cols = Math.floor(c.width / 14);
+    drops = Array(cols).fill(1).map(function () { return Math.random() * -60; });
+  }
+  size(); addEventListener('resize', size);
+  setInterval(function () {
+    x.fillStyle = 'rgba(0,0,0,.08)';
+    x.fillRect(0, 0, c.width, c.height);
+    x.font = '13px monospace';
+    for (var i = 0; i < cols; i++) {
+      x.fillStyle = Math.random() < .04 ? '#e8ffe8' : '#00b32d';
+      x.fillText(glyphs[Math.floor(Math.random() * glyphs.length)],
+                 i * 14, drops[i] * 14);
+      if (drops[i] * 14 > c.height && Math.random() > .975) drops[i] = 0;
+      drops[i]++;
+    }
+  }, 55);
+})();
+</script>
+</body>
+</html>

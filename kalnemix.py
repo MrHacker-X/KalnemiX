@@ -1,1066 +1,1019 @@
-# /bin/python3
-# Script by MrHacker-X
-# https://github.com/MrHacker-X
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+KalnemiX v2.0 - web reconnaissance & recon-aids toolkit.
 
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse
-import requests
-import nmap
-import subprocess
-import getpass
-import ipaddress
-import json
-import hashlib
-import os
-import socket
-import re
-from urllib.parse import urlparse
-from concurrent.futures import ThreadPoolExecutor
-import signal
-import sys
-import dns.resolver
-from time import sleep
-import multiprocessing
-from threading import Thread
-from queue import Queue
+Important: this is an OPEN-SOURCE-INTELLIGENCE (OSINT) / RECON tool.
+It reads PUBLIC information about a target: whois records, DNS records,
+HTTP headers, robots.txt, public subdomains, TLS certificate data.
+It does not exploit, attack, or gain access to anything.
 
-def signal_handler(sig, frame):
-    exit(0)
+Authorized-use only: run it against systems YOU own or have written
+permission to test. See the DISCLAIMER in README.md.
 
-signal.signal(signal.SIGINT, signal_handler)
-
-
-
-
-def bnr():
-    os.system('cat core/banr.txt')
-
-main_menu = """\033[0m
-\033[1;31m[░░] \033[1;32mSelect Any Option:
-
-\033[1;31m[01]\033[1;32m WhoIs Lookup         \033[1;31m[11]\033[1;32m Find Hidden files
-\033[1;31m[02]\033[1;32m IP Lookup            \033[1;31m[12]\033[1;32m Crack Hash
-\033[1;31m[03]\033[1;32m Find Subdomain       \033[1;31m[13]\033[1;32m Get IMG Metadata
-\033[1;31m[04]\033[1;32m Show Http Header     \033[1;31m[14]\033[1;32m Subnet Lookup
-\033[1;31m[05]\033[1;32m Robots Scanner       \033[1;31m[15]\033[1;32m SSL Scan
-\033[1;31m[06]\033[1;32m DNS Lookup           \033[1;31m[16]\033[1;32m OS FingerPrint
-\033[1;31m[07]\033[1;32m Reverse IP Lookup    \033[1;31m[17]\033[1;32m Create Reverse Shell
-\033[1;31m[08]\033[1;32m Traceroute           \033[1;31m[18]\033[1;32m Create Deface Page
-\033[1;31m[09]\033[1;32m Scan Open Port       \033[1;31m[19]\033[1;32m Connect with us
-\033[1;31m[10]\033[1;32m Extract URL          \033[1;31m[20]\033[1;32m About
-\033[1;31m[99]\033[1;32m Exit
-
-╔═══╗
-╚═══[\033[1;31mkalnemix\033[0m\033[1;32m]>\033[1;31m """
-
-soc = """
-\033[1;31m[░░] \033[1;32mSelect any options
-
-\033[1;31m[01] \033[1;32mInstagram
-\033[1;31m[02] \033[1;32mFacebook
-\033[1;31m[03] \033[1;32mGithub
-\033[1;31m[04] \033[1;32mYouTube
-\033[1;31m[05] \033[1;32mTelegram Channel
-\033[1;31m[06] \033[1;32mTelegram Community
-\033[1;31m[95] \033[1;32mBack
-\033[1;31m[99] \033[1;32mExit
-
-╔═══╗
-╚═══[\033[1;31mkalnemix\033[0m\033[1;32m]>\033[1;31m """
-
-rest = """\033[0m
-\033[1;31m[░░] \033[1;32mSelect Hash Type:
-
-\033[1;31m[01]\033[1;32m md5
-\033[1;31m[02]\033[1;32m sha1
-\033[1;31m[03]\033[1;32m sha224
-\033[1;31m[04]\033[1;32m sha256
-\033[1;31m[05]\033[1;32m sha384
-\033[1;31m[06]\033[1;32m sha512
-\033[1;31m[07]\033[1;32m sha3-224
-\033[1;31m[08]\033[1;32m sha3-256
-\033[1;31m[09]\033[1;32m sha3-384
-\033[1;31m[10]\033[1;32m sha3-512
-\033[1;31m[95]\033[1;32m Back
-\033[1;31m[99]\033[1;32m Exit
-
-╔═══╗
-╚═══[\033[1;31mkalnemix\033[0m\033[1;32m]>\033[1;31m """
-
-subin = """
-\033[1;31m[░░] \033[1;32mSelect Any Option:
-
-\033[1;31m[01]\033[1;32m Quick Scan
-\033[1;31m[02]\033[1;32m Deep Scan
-\033[1;31m[95]\033[1;32m Back
-\033[1;31m[99]\033[1;32m Exit
-
-╔═══╗
-╚═══[\033[1;31mkalnemix\033[0m\033[1;32m]>\033[1;31m """
-
-aboutx = """
-\033[1;31m[+]\033[1;32m Introduction:\033[0m\033[32m KalnemiX is a powerful web pentesting tool that provides a range of useful features to help you identify and exploit vulnerabilities in your target web application. This tool is designed to be user-friendly and efficient, allowing you to quickly and easily access the information you need to perform effective penetration testing.
-
-\033[1;31m[+]\033[1;32m The following are some of the key features of KalnemiX:\033[0m\033[32m
-
-\033[1;31m[01]\033[1;32m WhoIs Lookup:\033[0m\033[32m This feature allows you to perform a WhoIs lookup on a domain name, which can provide useful information about the owner of the domain, its registration details, and more.
-
-\033[1;31m[02]\033[1;32m IP Lookup:\033[0m\033[32m This feature allows you to perform a lookup on an IP address, which can help you identify the location of the server hosting the web application and other useful information.
-
-\033[1;31m[03]\033[1;32m Find Subdomain:\033[0m\033[32m This feature allows you to discover subdomains of a target domain, which can be useful for identifying additional attack surfaces.
-
-\033[1;31m[04]\033[1;32m Show HTTP Header:\033[0m\033[32m This feature allows you to view the HTTP headers of a web page, which can provide information about the web server, software versions, and more.
-
-\033[1;31m[05]\033[1;32m Robots Scanner:\033[0m\033[32m This feature allows you to scan a website for the presence of a robots.txt file, which can reveal information about which pages are excluded from search engines.
-
-\033[1;31m[06]\033[1;32m DNS Lookup:\033[0m\033[32m This feature allows you to perform a DNS lookup on a domain, which can provide information about the DNS servers responsible for resolving the domain name.
-
-\033[1;31m[07]\033[1;32m Reverse IP Lookup:\033[0m\033[32m This feature allows you to perform a reverse IP lookup, which can help you identify other websites hosted on the same server.
-
-\033[1;31m[08]\033[1;32m Traceroute:\033[0m\033[32m This feature allows you to perform a traceroute to a target IP address, which can help you identify the network path taken to reach the target.
-
-\033[1;31m[09]\033[1;32m Scan Open Port:\033[0m\033[32m This feature allows you to scan for open ports on a target IP address, which can help you identify potential attack vectors.
-
-\033[1;31m[10]\033[1;32m Extract URL:\033[0m\033[32m This feature allows you to extract URLs from a web page, which can be useful for identifying hidden pages or directories.
-
-\033[1;31m[11]\033[1;32m Find Hidden Files:\033[0m\033[32m This feature allows you to search for hidden files and directories on a web server, which can reveal additional attack surfaces.
-
-\033[1;31m[12]\033[1;32m Crack Hash:\033[0m\033[32m This feature allows you to crack password hashes, which can be useful for gaining access to protected resources.
-
-\033[1;31m[13]\033[1;32m Get IMG Metadata:\033[0m\033[32m This feature allows you to extract metadata from image files, which can provide information about the camera used to capture the image and other details.
-
-\033[1;31m[14]\033[1;32m Subnet Lookup:\033[0m\033[32m This feature allows you to perform a lookup on a subnet, which can provide information about the range of IP addresses assigned to a particular network.
-
-\033[1;31m[15]\033[1;32m SSL Scan:\033[0m\033[32m This feature scans a website's SSL certificate and provides information about the certificate's validity and strength.
-
-\033[1;31m[16]\033[1;32m OS FingerPrint:\033[0m\033[32m This feature attempts to identify the operating system that a target device is running.
-
-\033[1;31m[17]\033[1;32m Create Reverse Shell:\033[0m\033[32m This feature allows you to create a reverse shell to connect back to a target system, which can be useful for remote access or penetration testing.
-
-\033[1;31m[18]\033[1;32m Create Deface Page:\033[0m\033[32m This feature allows you to create a defaced webpage that replaces the original website content.
-
-
-\033[1;31m[19]\033[1;32m Connect with us:\033[0m\033[32m This feature provides a way for users to contact you for support, feedback, or collaboration.
-
-\033[1;31m[+]>\033[1;32m Overall, KalnemiX is a powerful and versatile web pentesting tool that provides a range of features to help you identify and exploit vulnerabilities in your target web application. Whether you are a security professional or a hobbyist, this tool is sure to be a valuable addition to your toolkit.
-
-\033[1;31m[+]\033[1;32m By MrHacker-X
+Author : MrHacker-X  (https://github.com/MrHacker-X)
+Site   : https://vritrasec.com
+License: BSL-1.0 (Boost Software License)
 """
 
-def genface():
+import argparse
+import datetime
+import hashlib
+import ipaddress
+import json
+import os
+import random
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse, urljoin
 
-    while  True:
-        hacker_name = input("\033[1;31m[+]\033[1;32m Hacker's Name: \033[1;31m")
-        if hacker_name == '':
-            pass
-        else:
-            break
-    while True:
-        hacker_logo = input("\033[1;31m[+]\033[1;32m Your logo URL or path: \033[1;31m")
-        if hacker_logo == '':
-            pass
-        else:
-            break
-    while True:
-        hacker_cont = input("\033[1;31m[+]\033[1;32m Any contact Info [Like: email]: \033[1;31m")
-        if hacker_cont == '':
-            pass
-        else:
-            break
-    while True:
-        hacker_contq = input("\033[1;31m[+]\033[1;32m More contact Info [Like: Telegram]:\033[1;31m ")
-        if hacker_contq == '':
-            pass
-        else:
-            break
-    while True:
-        hacker_tagl = input("\033[1;31m[+]\033[1;32m Your Tagline:\033[1;31m ")
-        if hacker_tagl == '':
-            pass
-        else:
-            break
-    while True:
-        hacker_msg = input("\033[1;31m[+]\033[1;32m Any message: \033[1;31m")
-        if hacker_msg == '':
-            pass
-        else:
-            break
 
-    # open the input HTML file
-    with open('core/dummy.html', 'r') as file:
-        filedata = file.read()
-
-    # replace the word "old_word" with "new_word" in the HTML file
-    filedata = filedata.replace('MrHacker X', hacker_name)
-    filedata = filedata.replace('msgxx', hacker_msg)
-    filedata = filedata.replace('logox', hacker_logo)
-    filedata = filedata.replace('taglne', hacker_tagl)
-    filedata = filedata.replace('metail', hacker_cont)
-    filedata = filedata.replace('mrhackerx', hacker_contq)
-    # save the modified HTML to a new file
-    with open('index.html', 'w') as file:
-        file.write(filedata)
-
-   
-
-
-def gensel():
-    # Prompt the user for input
-    while True:
-        user_ip = input("\033[1;31m[+]\033[1;32m Enter Your IP address: \033[1;31m")
-        if user_ip == '':
-            pass
-        else:
-            break
-    while True:
-        user_port = input("\033[1;31m[+]\033[1;32m Enter a Listning Port: \033[1;31m")
-        if user_port == '':
-            pass
-        else:
-            break
-
-    # Define the PHP file name
-    php_file_name = "core/main_shell.php"
-
-    # Open the PHP file for reading
-    with open(php_file_name, "r") as php_file:
-        # Read the contents of the PHP file
-        php_contents = php_file.read()
-
-    # Replace the IP and port values with the user input
-    new_php_contents = php_contents.replace("$ip = '127.0.0.1';", f"$ip = '{user_ip}';")
-    new_php_contents = new_php_contents.replace("$port = 1234;", f"$port = {user_port};")
-
-    # Define the new PHP file name
-    new_php_file_name = "reverse-shell.php"
-
-    # Open the new PHP file for writing
-    with open(new_php_file_name, "w") as new_php_file:
-        # Write the new PHP contents to the file
-        new_php_file.write(new_php_contents)
-
-
-def osfinint():
-    # Get target from user
-    while True:
-        target = input("\033[1;31m[+]\033[1;32m Enter Target IP/Domain: \033[1;31m")
-        if target == '':
-            pass
-        else:
-            print("\033[1;31m[+]\033[1;32m Scanning...")
-            print("\033[1;31m[~]\033[1;32m This may take some time so please be patient")
-            break
-
-    # Check if the input is a valid IP address
-    ip_pattern = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
-    if ip_pattern.match(target):
-        target_ip = target
-    else:
-        # If the input is not a valid IP address, try to resolve it to an IP address
-        try:
-            target_ip = socket.gethostbyname(target)
-        except socket.gaierror:
-            print("\033[1;31m[x] Invalid input")
-            exit()
-
-    # Create Nmap scanner object
-    scanner = nmap.PortScanner()
-
-    # Run OS fingerprint scan on target IP
-    try:
-        scanner.scan(target_ip, arguments="-O")
-    except nmap.PortScannerError:
-        print("\n\033[1;31m [x] Error: {0}".format(scanner.scaninfo()["error"]))
-
-    # Print OS fingerprint results
-    if "osmatch" in scanner[target_ip]:
-        os_matches = scanner[target_ip]["osmatch"]
-        print("\n\033[1;31m[+] \033[1;32mThe following operating systems were identified on\033[1;31m {0}:".format(target_ip) + "\n")
-        for os_match in os_matches:
-            os_name = os_match["name"]
-            os_accuracy = os_match["accuracy"]
-            os_vendor = os_match["osclass"][0]["vendor"]
-            os_family = os_match["osclass"][0]["osfamily"]
-            os_gen = os_match["osclass"][0]["osgen"]
-            print("\033[1;31m[+]\033[1;32m Name: {0}\n\033[1;31m[+]\033[1;32m Accuracy: {1}\n\033[1;31m[+]\033[1;32m Vendor: {2}\n\033[1;31m[+]\033[1;32m OS Family: {3}\n\033[1;31m[+] \033[1;32mOS Gen: {4}\n".format(os_name, os_accuracy, os_vendor, os_family, os_gen))
-    else:
-        print("\033[1;31m[+] \033[1;32m Unable to identify operating system on\033[1;31m {0}.".format(target_ip))
-
-
-
-def quickscan():
-    while True:
-        domain = input("\033[1;31m[~]\033[1;32m Enter Domain:\033[1;31m ")
-        if domain == '':
-            pass
-        else:
-            break
-        
-    print('\033[1;31m[~] \033[1;32mScanning...')
-    d = "http://api.hackertarget.com/hostsearch/?q=" + domain
-    r = requests.get(d)
-    print()
-    r.text
-
-    for line in r.text.splitlines():
-        first_part = line.split(',')[0]
-        firt_part = line.split(',')[1]
-        print("\033[1;32m[+] \033[1;31mSubdomain: \033[1;32m" + first_part)
-        print("\033[1;32m[+] \033[1;31mIP: \033[1;32m" + firt_part)
-        print()
-
-
-
-def worker(subdomain, domain):
-    hostname = subdomain + '.' + domain
-    try:
-        answer = dns.resolver.resolve(hostname)
-        for record in answer:
-            print("\033[1;32m[+] \033[1;31mSubdomain: \033[1;32m" + hostname)
-            print("\033[1;32m[+]\033[1;31m IP: \033[1;32m" + record.to_text())
-            print()
-    except:
-        pass
-
-def deepscan():
-    while True:
-        domain = input("\033[1;31m[~]\033[1;32m Enter Domain:\033[1;31m ")
-        if domain == '':
-            pass
-        else:
-            break
-    print()
-    # Get the custom wordlist from the user
-    custom_wordlist = 'core/sublist.txt'
-    
-    # Read the wordlist file and split it into a list of subdomain names
-    with open(custom_wordlist, 'r') as f:
-        subdomain_list = f.read().splitlines()
-
-    # Create a multiprocessing pool and map the worker function to the subdomain list
-    pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-    pool.starmap(worker, [(subdomain, domain) for subdomain in subdomain_list])
-    pool.close()
-    pool.join()
-
-
-
-
-def exitf():
-    print()
-    print("\033[1;31m[+]\033[1;32m Thanks For Using Our \033[1;31mKalnemiX \033[1;32mTool.")
-    sleep(0.2)
-    print("\033[1;31m[+]\033[1;32m Join our Telegram Community and Channel.")
-    sleep(0.2)
-    print("\033[1;31m[+]\033[1;32m Please subscribe our YouTube channel")
-    sleep(0.2)
-    os.system("xdg-open https://youtube.com/@Technolex")
-    print()
-
-
-def crack():
-    print()
-    while True:
-        target_hash = input("\033[1;31m[~]\033[1;32m Enter target Hash: \033[1;31m")
-        if target_hash == '':
-            pass
-        else:
-            break
-
-    while True:
-        wordlist_path = input("\033[1;31m[~] \033[1;32mEnter Wordlist Path [\033[1;31mEnter for Default\033[1;32m]: \033[1;31m")
-        if wordlist_path == '':
-            wordlist_path = 'core/crack_hash_pass.txt'
-            print("\n\033[1;31m[+] \033[1;32mDefault Wordlist selected")
-            break
-        else:
-            break
-    
-    print()
-    total_words = sum(1 for line in open(wordlist_path, 'r', encoding='latin-1'))
-    with open(wordlist_path, 'r', encoding='latin-1') as wordlist_file:
-        tried = 0
-        for line in wordlist_file:
-            word_hash = getattr(hashlib, hash_type)(line.strip().encode()).hexdigest()
-
-            tried += 1
-            print(f"\r\033[1;31m[~]\033[1;32m Trying:\033[1;31m {tried}/{total_words}", end='')
-            if word_hash == target_hash:
-                print(f"\n\n\033[1;31m[+] \033[1;32mHash is cracked:\033[1;31m {line.strip()}")
-                print()
-                break
-
-        else:
-            print('\n\033[1;31m[!]\033[1;32m Password not found')
-
-
-def ipd():
-
-    response = requests.get("http://ip-api.com/json/" + ips)
-    data = json.loads(response.content)
-
-    for key, value in data.items():
-        print("\033[1;31m[+] \033[1;32m" + "{}: {}".format(key, value))
-
-def http_hd():
-
-    url = ('http://' + ips)
-    r = requests.get(url) 
-
-    for key, value in r.headers.items(): 
-        print("\033[1;31m[+]\033[1;32m " + key + " : " + value)
-
-def robots():
-    isp = ("http://" + ips)
-    res = requests.get(isp + '/robots.txt') 
-    if res.status_code == 200: 
-
-        # Extract all the disallowed paths from robots.txt file 
-        disallowed_paths = re.findall('Disallow: (.*)', res.text) 
-
-        # Print all the disallowed paths 
-        print('\033[1;31m[+]\033[1;32m The following paths are disallowed in robots.txt:') 
-
-        for path in disallowed_paths: 
-
-            print(path)
-
-def revip():
-    def reverseIP(ip): 
-        try: 
-            hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip) 
-            return hostname, ipaddrlist[0]
-        except socket.herror: 
-            return "Unable to get hostname"
-
-    hostname, ip_address = reverseIP(ips) 
-    print("Hostname:", hostname) 
-    print("IP Address:", ip_address)
-
-def routrce():
-    os.system("traceroute " + ips)
-
-def scanort():
-    scanner = nmap.PortScanner()
-    # Add the arguments to the scanner
-    scanner.scan(target, arguments="-vv -p1-" + endport + " -T4")
-
-    # Loop through each port and check if it's open
-    for host in scanner.all_hosts():
-        print("Host : %s (%s)" % (host, scanner[host].hostname()))
-        print("State : %s" % scanner[host].state())
-        for proto in scanner[host].all_protocols():
-            print("Protocol : %s" % proto)
-
-            lport = scanner[host][proto].keys()
-            lport = sorted(lport)
-            for port in lport:
-                print("port : %s\tstate : %s" % (port, scanner[host][proto][port]['state']))
-
-def rxtrl():
-    ipsr = "http://" + ips 
-
-    response = requests.get(ipsr)
-
-    soup = BeautifulSoup(response.content, 'html5lib')
-
-    links = soup.find_all('a')
-
-    for link in links:
-        href = link.get('href')
-        if urlparse(href).query:
-            print("\033[1;31m[+] \033[1;32m" + href)
-        else:
-            print("\033[1;31m[+] \033[1;32m" + urlparse(ips)._replace(path=href).geturl())
-            sleep(0.1)
-
-
-def findon():
-
-    def check_url(url):
-        try:
-            req = requests.get(url, timeout=3, allow_redirects=True)
-            if req.status_code != 404:
-                print("\033[1;31m[+]\033[1;32m Found: \033[1;32m" + url )
-            return True
-        except:
-            return False
-
-    # function to find admin panel of website by bruteforcing method using wordlist file
-    def find_admin(url):
-        with open(passd, 'r') as fp:
-            lines = fp.readlines()
-        lines = [line.strip() for line in lines]
-
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            for line in lines:
-                test_url = url + "/" + line + "/"
-                executor.submit(check_url, test_url)
-
-    # prompt user for input
-    
-    while True:
-        passd = input("\033[1;31m[+] \033[1;32mWordlist Path [\033[1;31mEnter For Default\033[1;32m]: \033[1;31m")
-        if passd == '':
-            print("\033[1;31m[~] \033[1;32mDefault Wordlist selected")
-            passd = 'core/dir_list.txt'
-            break
-
-        else:
-            break
-
-
-    print('\n\033[1;31m[+] \033[1;32mScanning...\n')
-    url = ("http://" + ips)
-    # parse the url to get the base url
-    parsed_url = urlparse(url)
-    base_url = parsed_url.scheme + '://' + parsed_url.netloc
-
-    # call the find_admin function with the base url
-    try:
-        signal.signal(signal.SIGINT, signal.default_int_handler)
-        find_admin(base_url)
-    except KeyboardInterrupt:
-        print("\n\033[1;31m[!]\033[1;32m Stopping...\n")
-
-
-
-def emetad():
-    print('\033[1;32m')
-    os.system("exiftool " + ips)
-
-def findshrs():
-
-    record_types = ['A', 'AAAA', 'MX', 'NS', 'TXT', 'SOA']
-
-    # set timeout for DNS resolution in seconds
-    timeout = 5
-
-    # dictionary to store the results
-    results = {}
-
-    for record_type in record_types:
-        try:
-            # perform DNS resolution for the record type
-            records = dns.resolver.resolve(domain_name, record_type, lifetime=timeout)
-            results[record_type] = [str(record) for record in records]
-        except dns.resolver.NoAnswer:
-            # handle case where no answer is found for the record type
-            results[record_type] = ["No {} record found".format(record_type)]
-        except dns.resolver.LifetimeTimeout:
-            # handle case where resolution timeout is reached
-            results[record_type] = ["DNS resolution for {} timed out".format(record_type)]
-
-    # print the results
-    for record_type, records in results.items():
-        print("\033[1;31m[+] \033[1;32m" + "{} : {}".format(record_type, ", ".join(records)))
-
-
-def subnetf():
-    ip_address = ipaddress.IPv4Address(ips)
-    subnet = ipaddress.IPv4Network(ips + '/32', strict=False)
-    netmask = subnet.netmask
-    broadcast = subnet.broadcast_address
-    wildcard_mask = subnet.hostmask
-    hosts_bits = subnet.max_prefixlen - subnet.prefixlen
-    max_hosts = 2 ** hosts_bits - 2
-    host_range = ip_address, ip_address
-
-    # print the results
-    print(f"\033[1;31m[+]\033[1;32m Address      :\033[1;31m {ips}")
-    print(f"\033[1;31m[+]\033[1;32m Network      :\033[1;31m {subnet}")
-    print(f"\033[1;31m[+]\033[1;32m Netmask      :\033[1;31m {netmask}")
-    print(f"\033[1;31m[+]\033[1;32m Broadcast    :\033[1;31m {broadcast}")
-    print(f"\033[1;31m[+]\033[1;32m Wildcard Mask:\033[1;31m {wildcard_mask}")
-    print(f"\033[1;31m[+]\033[1;32m Hosts Bits   :\033[1;31m {hosts_bits}")
-    print(f"\033[1;31m[+]\033[1;32m Max Hosts    :\033[1;31m {max_hosts}   (2^{hosts_bits} - 2)")
-    print(f"\033[1;31m[+]\033[1;32m Host Range   :\033[1;31m {{ {host_range[0]} - {host_range[1]} }}")
-
-
-def revip():
-    def reverseIP(ip): 
-        try: 
-            hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip) 
-            return hostname, ipaddrlist[0]
-        except socket.herror: 
-            return "Unable to get hostname"
-    
-    hostname, ip_address = reverseIP(ip) 
-    print("\033[1;31m[+] \033[1;32mHostname:\033[1;31m", hostname) 
-    print("\033[1;31m[+] \033[1;32mIP Address:\033[1;31m", ip_address)
-
-
-
-def scanl():
-    print()
-    while True:
-        ipsd = input("")
-
-
-################# Check password and configuration ##################
-
-
-cmd = "ping -c 1 8.8.8.8"
-# Run the command using subprocess
 try:
-    subprocess.check_output(cmd, shell=True)
-    print("\033[1;32m[✔] Internet Connectivity: Done")
-    sleep(0.2)
-except subprocess.CalledProcessError:
-    print("\033[1;31m[✘] Internet se connect to ho ja pahle bsdk.\n")
-    exit()
+    import requests
+except ImportError:
+    print("[x] missing dependency: requests  (pip3 install requests)")
+    sys.exit(1)
+
+__version__ = "2.1.0"
+PROG = os.path.basename(sys.argv[0]) or "kalnemix"
+START = os.path.dirname(os.path.abspath(__file__))
+
+UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+REQ = requests.Session()
+REQ.headers["User-Agent"] = UA
 
 
-
-# Define the shell command to ping Google's DNS server
-
-PASSWORD_URL = 'https://raw.githubusercontent.com/hackwithalex/.../main/...'
-
-# Get the password from the URL
-response = requests.get(PASSWORD_URL)
-password = response.text.strip()
-
-# Prompt the user to enter a password
-#user_password = getpass.getpass("[+] Enter the password: ")
-user_password = input("\033[1;31m[+]\033[1;32m Enter the password:\033[1;31m ")
-print("\033[1;32m[~] Password Verifying...")
-sleep(1)
-
-# Compare the passwords
-if user_password == password:
-    print("\033[1;32m[✔] Password is correct")
-    sleep(0.2)
-    print("\033[1;32m[✔] Access Granted")
-    sleep(0.2)
-else:
-    print("\n\033[1;31m[✘] Access denied")
-    input("\nPress ENTER To Get Password")
-    os.system("xdg-open https://telegram.me/hackwithalex/337")
-    exit(0)
+class SafeExit(Exception):
+    """User aborted input - handled centrally, clean exit."""
 
 
-# Get the file path of the running script
-file_path = os.path.abspath(__file__)
+# optional deps: degrade instead of crash
+try:
+    import dns.resolver
+    HAS_DNS = True
+except ImportError:
+    HAS_DNS = False
 
-# Check if the file path contains the Termux path
-if "/data/data/com.termux/files/home/" in file_path:
-    print("\033[1;32m[✔] Platform: Termux")
-    sleep(0.2)
-elif os.name == "posix":
-    print("\033[1;32m[✔] Platform: Linux")
-    sleep(0.2)
-else:
-    print("\033[1;31m[✘] Unsupported Operating System\n")
-    exit()
-
-# Check if the user is root
-if os.geteuid() == 0:
-    print("\033[1;32m[✔] User privilege: Root")
-    sleep(0.2)
-else:
-    print("\033[1;31m[✔] User privilege: Normal\n")
-    sleep(0.2)
-
-### Final msg to launch
-
-print("\n\033[1;31m[+] \033[1;32mStarting KalnemiX...")
-sleep(2)
-
-## main script starting--------------------------------------
-
-while True:
-    os.system("clear")
-    bnr()
-    men = input(main_menu)
-    if men == '01' or men == '1':
-        print()
-        while True:
-            ips = input("\033[1;31m[~] \033[1;32mEnter Target IP/Domain: \033[1;31m")
-            if ips == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print('\033[1;32m')
-                os.system("whois " + ips)
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
-
-    elif men == '2' or men == '02':
-        print()
-        while True:
-            ips = input("\033[1;31m[~] \033[1;32mEnter Target IP/Domain: \033[1;31m")
-            if ips == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                ipd()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
-
-    elif men == '3' or men == '03':
-        while True:
-            os.system('clear')
-            bnr()
-            terss = input(subin)
-            if terss == '':
-                pass
-            elif terss == '01' or terss == '1':
-                print()
-                quickscan()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-            elif terss == '02' or terss == '2':
-                print()
-                deepscan()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-            elif terss == "95":
-                break
-            elif terss == "99":
-                exitf()
-                exit()
-            else:
-                print()
-
-    elif men == '4' or men == '04':
-        print()
-        while True:
-            ips = input("\033[1;31m[~] \033[1;32mEnter Target Domain: \033[1;31m")
-            if ips == '':
-                print()
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                http_hd()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
-
-    elif men == '5' or men == '05':
-        print()
-        while True:
-            ips = input("\033[1;31m[~]\033[1;32m Enter Target Domain: \033[1;31m")
-            if ips == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                robots()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
-
-    elif men == '6':
-        print()
-        while True:
-            domain_name = input("\033[1;31m[~] \033[1;32mEnter Target Domain:\033[1;31m ")
-            if domain_name == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                findshrs()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
-
-    elif men == '7' or men == '07':
-        print()
-        while True:
-            ip = input("\033[1;31m[~] \033[1;32mEnter Target IP Address: \033[1;31m")
-            if ip == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                revip()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
-
-    elif men == '8' or men == '08':
-        print()
-        while True:
-            ips = input("\033[1;31m[~] \033[1;32mEnter Target IP/Domain: \033[1;31m")
-            if ips == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                routrce()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
-
-    elif men == '9' or men == '09':
-        print()
-        while True:
-            target = input("\033[1;31m[~] \033[1;32mEnter Target IP/Domain: \033[1;31m")
-            if target == '':
-                pass
-            else:
-                break
-
-        while True:
-            endport = input("\033[1;31m[~] \033[1;32mEnter Endport [\033[1;31mDefault is 1000\033[1;32m]: \033[1;31m")
-            if endport == '':
-                print()
-                print("\033[1;31m[+] \033[1;32mSelected Endport \033[1;31m1000")
-                endport = "1000"
-                break
-            else:
-                print()
-                print("\033[1;31m[+] \033[1;32mSelected Endport \033[1;31m" + endport)
-                break
-
-        print()
-        print("\033[1;31m[~] \033[1;32mScanning...")
-        print("\033[1;31m[~] \033[1;32mThis may take some time so please be patient")
-        print()
-        scanort()
-        print()
-        input("\033[1;34mPress ENTER To Continue")
+try:
+    import ssl  # noqa: F401
+    HAS_SSL = True
+except ImportError:
+    HAS_SSL = False
 
 
-    elif men == '10':
-        print()
-        while True:
-            ips = input("\033[1;31m[~] \033[1;32mEnter Target Domain: \033[1;31m")
-            if ips == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                rxtrl()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
-    
-    elif men == '11':
-        print()
-        while True:
-            ips = input("\033[1;31m[~] \033[1;32mEnter Target Domain:\033[1;31m ")
-            if ips == '':
-                pass
-            else:
-                findon()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
+def _color_ok() -> bool:
+    if os.environ.get("NO_COLOR"):
+        return False
+    try:
+        return sys.stdout.isatty()
+    except Exception:
+        return False
 
-    elif men == '12':
-        print()
-        while True:
-            os.system('clear')
-            bnr()
-            asr = input(rest)
-            if asr == '':
-                pass
-            elif asr == '1' or asr == '01':
-                hash_type = 'md5'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '2' or asr == '02':
-                hash_type = 'sha1'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '3' or asr == '03':
-                hash_type = 'sha224'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '4' or asr == '04':
-                hash_type = 'sha256'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '5' or asr == '05':
-                hash_type = 'sha384'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '6' or asr == '06':
-                hash_type = 'sha512'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '7' or asr == '07':
-                hash_type = 'sha3_224'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '8' or asr == '08':
-                hash_type = 'sha3_256'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '9' or asr == '09':
-                hash_type = 'sha3_384'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '10':
-                hash_type = 'sha3_512'
-                crack()
-                input("\n\033[1;34mPress ENTER To Continue")
-            elif asr == '95':
-                break
-            elif asr == '99':
-                exitf()
-                exit()
-            else:
-                pass
 
-    elif men == '13':
-        print()
-        while True:
-            ips = input("\033[1;31m[~] \033[1;32mEnter Image path: \033[1;31m")
-            if ips == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                emetad()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
-        
-    elif men == '14':
-        print()
-        while True:
-            ips = input("\033[1;31m[~] \033[1;32mEnter Target IP Address: \033[1;31m")
-            if ips == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                subnetf()
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
+COLOR = _color_ok()
+WH = "\033[1;97m" if COLOR else ""
+YL = "\033[38;5;179m" if COLOR else ""
+GR = "\033[38;5;150m" if COLOR else ""
+DM = "\033[38;5;245m" if COLOR else ""
+XX = "\033[0m" if COLOR else ""
 
-    elif men == '15':
-        print()
-        while True:
-            ips = input("\033[1;31m[~] \033[1;32mEnter Target IP/Domain: \033[1;31m")
-            if ips == '':
-                pass
-            else:
-                print()
-                print("\033[1;31m[~] \033[1;32mScanning...")
-                print()
-                os.system("sslscan " + ips)
-                print()
-                input("\033[1;34mPress ENTER To Continue")
-                break
+RULE = "─" * 62
 
-    elif men == '16':
-        if os.geteuid() != 0:
-            print("\n\033[1;31m[+]\033[1;32m Root required")
-            print()
-            input("\033[1;34mPress ENTER To Continue")
-        else:
-            #pass
-            print()
-            osfinint()
-            print()
-            input("\033[1;34mPress ENTER To Continue")
 
-    elif men == '17':
-        print()
-        gensel()
-        print("\033[1;31m[+]\033[1;32m Creating Reverse Shell...")
-        sleep(4)
-        print('\n\033[1;31m[+] \033[1;32mReverse shell Created and saved in your current working directory')
-        print("\033[1;31m[+] \033[1;32mFile name is: \033[1;31mreverse-shell.php\n")
-        input("\033[1;34mPress ENTER To Continue")
+# ---------------------------------------------------------------- UI helpers
 
-    elif men == '18':
-        print()
-        genface()
-        print("\n\033[1;31m[+]\033[1;32m Creating Deface Page...")
-        sleep(4)
-        print('\033[1;31m[+] \033[1;32mDeface Page Created and saved in your current working directory')
-        print("\033[1;31m[+] \033[1;32mFile name is: \033[1;31mindex.html\n")
-        input("\033[1;34mPress ENTER To Continue")
 
-    elif men == '19':
-        while True:
-            os.system("clear")
-            bnr()
-            print()
-            print("\033[1;31m[~] \033[1;32mThanks for using our tool '\033[1;31mKalnemiX\033[1;32m'. So you can follow me on various social media site. Link and options are given down below, So select here options where you want to follow me ")
-            print()
-            fol = input(soc)
-            if fol == '1' or fol == '01':
-                print()
-                print("\033[1;31m[~] \033[1;32mOpening my Instagram profile in your device \n")
-                sleep(0.8)
-                os.system("xdg-open https://instagram.com/0hacker.x0")
-            
-            elif fol == '2' or fol == '02':
-                print()
-                print("\033[1;31m[~] \033[1;32mOpening my Facebook page in your device \n")
-                sleep(0.8)
-                os.system("xdg-open https://facebook.com/hackerxmr")
+def rule() -> None:
+    print(f"  {YL}{RULE}{XX}")
 
-            elif fol == '3' or fol == '03':
-                print()
-                print("\033[1;31m[~] \033[1;32mOpening my Github profile in your device \n")
-                sleep(0.8)
-                os.system("xdg-open https://github.com/MrHacker-X")
 
-            elif fol == '4' or fol == '04':
-                print()
-                print("\033[1;31m[~] \033[1;32mOpening my YouTube channel in your device \n")
-                sleep(0.8)
-                os.system("xdg-open https://youtube.com/@Technolex")
-            
-            elif fol == '5' or fol == '05':
-                print()
-                print("\033[1;31m[~] \033[1;32mOpening my Telegram Channel in your device \n")
-                sleep(0.8)
-                os.system("xdg-open https://telegram.me/hackwithalex")
+def header(subtitle: str) -> None:
+    print()
+    rule()
+    print(f"  {WH}{subtitle}{XX}")
+    rule()
 
-            elif fol == '6' or fol == '06':
-                print()
-                print("\033[1;31m[~] \033[1;32mOpening my Telegram Community in your device \n")
-                sleep(0.8)
-                os.system("xdg-open https://telegram.me/mrhackerx")
 
-            elif fol == '95':
-                break
+def kv(key: str, val: str, width: int = 14) -> None:
+    gap = " " * max(0, width - len(key))
+    print(f"  {YL}{key}{XX}{gap}  {DM}····{XX}  {WH}{val}{XX}")
 
-            elif fol == '99':
-                exitf()
-                exit()
 
-            elif fol == '':
-                pass
+def item(num: str, label: str, desc: str = "", dim: bool = False,
+         align: int = 13, numw: int = 2) -> None:
+    gap = (" " * max(0, align - len(label))) if desc else ""
+    tail = f"  {DM}····  {desc}{XX}" if desc else ""
+    c = DM if dim else GR
+    sp = " " * max(0, numw - len(num))
+    print(f"  [{YL}{num}{XX}]{sp} {c}{label}{XX}{gap}{tail}")
 
-            else:
-                pass
 
-    elif men == '20':
-        os.system('clear')
-        bnr()
-        print(aboutx)
-        input('\033[1;34mPress ENTER To Continue')
-   
-    elif men == "99":
-        exitf()
-        exit()
+def say(msg: str) -> None:
+    print(f"  {GR}›{XX} {WH}{msg}{XX}")
 
-    elif men == '':
-        pass
-        
 
+def note(msg: str) -> None:
+    print(f"  {DM}···· {msg}{XX}")
+
+
+def err(msg: str) -> None:
+    print(f"  {YL}[!]{XX} {DM}{msg}{XX}")
+
+
+def ask(prompt: str) -> str:
+    try:
+        return input(f"  {YL}›{XX} {prompt}: ").strip()
+    except EOFError:
+        raise SafeExit from None
+    # KeyboardInterrupt propagates to the central handler in main()
+
+
+def confirm(prompt: str) -> bool:
+    try:
+        raw = input(f"  {YL}›{XX} {prompt} [{GR}y{XX}/N]: ").strip().lower()
+    except EOFError:
+        raise SafeExit from None
+    return raw in ("y", "yes")
+
+
+def pause() -> None:
+    try:
+        input(f"  {YL}›{XX} {DM}enter to continue{XX}")
+    except EOFError:
+        raise SafeExit from None
+    print()
+
+
+# ------------------------------------------------------------- net utilities
+
+
+def norm_target(target: str) -> str:
+    """strip scheme/path from a user-supplied target."""
+    target = target.strip().replace("http://", "").replace("https://", "")
+    return target.split("/")[0].strip()
+
+
+def is_ip(s: str) -> bool:
+    try:
+        ipaddress.ip_address(s)
+        return True
+    except ValueError:
+        return False
+
+
+def resolve_host(target: str) -> str | None:
+    if is_ip(target):
+        return target
+    try:
+        return socket.gethostbyname(target)
+    except socket.gaierror:
+        return None
+
+
+def http_get(url: str, timeout: int = 10):
+    try:
+        return REQ.get(url, timeout=timeout, allow_redirects=True)
+    except requests.RequestException:
+        return None
+
+
+def detect_scheme(target: str) -> str:
+    """probe https then http; return whichever answers (or http as best guess)."""
+    for scheme in ("https", "http"):
+        if http_get(f"{scheme}://{target}/", timeout=5) is not None:
+            return scheme
+    return "http"
+
+
+def tool_available(name: str) -> bool:
+    return shutil.which(name) is not None
+
+
+def sh(cmd: list, timeout: int = 120) -> str:
+    """run an external tool, return its stdout (empty on failure)."""
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True,
+                             timeout=timeout)
+        return out.stdout or ""
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return ""
+
+
+# ------------------------------------------------------------------- banner
+
+
+_BLOCK_FONT = {
+    "A": [" ███ ", "█   █", "█████", "█   █", "█   █"],
+    "E": ["█████", "█    ", "████ ", "█    ", "█████"],
+    "I": ["███", " █ ", " █ ", " █ ", "███"],
+    "K": ["█   █", "█  █ ", "███  ", "█  █ ", "█   █"],
+    "L": ["█    ", "█    ", "█    ", "█    ", "█████"],
+    "M": ["█   █", "██ ██", "█ █ █", "█   █", "█   █"],
+    "N": ["█   █", "██  █", "█ █ █", "█  ██", "█   █"],
+    "X": ["█   █", " █ █ ", "  █  ", " █ █ ", "█   █"],
+}
+
+
+def _wordmark_rows(text: str) -> list:
+    """compose 5-row block-letter wordmark from safe full-block glyphs."""
+    rows = [""] * 5
+    for ch in text.upper():
+        glyph = _BLOCK_FONT.get(ch)
+        if glyph is None:
+            glyph = ["   "] * 5  # unknown char -> blank column
+        for i in range(5):
+            rows[i] += (" " if rows[i] else "") + glyph[i]
+    return rows
+
+
+def banner() -> None:
+    print()
+    rule()
+    rows = _wordmark_rows("KALNEMIX")
+    width = max(len(r) for r in rows)
+    pad = " " * max(2, (62 - width) // 2)
+    for r in rows:
+        print(f"  {pad}{YL}{r}{XX}")
+    sub = f"web recon · osint · v{__version__}"
+    print(f"  {DM}{sub.center(62)}{XX}")
+    rule()
+    print(f"  {DM}use only on systems you own or are authorized to test{XX}")
+    print()
+
+
+# =========================================================== recon modules ==
+# every action_* function is wrapped by run_action() which handles
+# setup/teardown, target resolution and error containment.
+
+
+def act_whois(target: str) -> None:
+    if tool_available("whois"):
+        out = sh(["whois", target])
+        if out.strip():
+            for line in out.splitlines():
+                if line.strip():
+                    print(f"  {DM}{line}{XX}")
+            return
+    header("whois lookup - web fallback")
+    resp = http_get(f"https://rdap.org/domain/{target}")
+    if resp is None or resp.status_code != 200:
+        err("rdap lookup failed - install whois or check connectivity")
+        return
+    try:
+        data = resp.json()
+    except (json.JSONDecodeError, ValueError):
+        err("rdap returned invalid data")
+        return
+    ev = {}
+    for e in data.get("events", []):
+        ev[e.get("eventAction", "")] = e.get("eventDate", "")
+    ent = data.get("entities", [])
+    registrar = ""
+    if ent:
+        for e in ent:
+            roles = e.get("roles", [])
+            if "registrar" in roles:
+                v = e.get("vcardArray", [])
+                if len(v) > 1:
+                    for item_ in v[1]:
+                        if item_[0] == "fn":
+                            registrar = item_[3]
+                            break
+    kv("domain", data.get("ldhName", target))
+    kv("registrar", registrar or "n/a")
+    kv("registered", ev.get("registration", "n/a"))
+    kv("expires", ev.get("expiration", "n/a"))
+    kv("updated", ev.get("last changed", ev.get("last update of rdap database", "n/a")))
+    kv("status", ", ".join(data.get("status", [])) or "n/a")
+
+
+def act_ipinfo(target: str) -> None:
+    ip = resolve_host(target)
+    if not ip:
+        err(f"could not resolve {target}")
+        return
+    resp = http_get(f"http://ip-api.com/json/{ip}")
+    if resp is None or resp.status_code != 200:
+        err("ip-api lookup failed")
+        return
+    try:
+        data = resp.json()
+    except (json.JSONDecodeError, ValueError):
+        err("ip-api returned invalid data")
+        return
+    kv("query", data.get("query", "n/a"))
+    kv("country", f"{data.get('country', 'n/a')} ({data.get('countryCode', '??')})")
+    kv("region", data.get("regionName", "n/a"))
+    kv("city", data.get("city", "n/a"))
+    kv("zip", data.get("zip", "n/a"))
+    kv("lat/lon", f"{data.get('lat', '?')}, {data.get('lon', '?')}")
+    kv("timezone", data.get("timezone", "n/a"))
+    kv("isp", data.get("isp", "n/a"))
+    kv("org", data.get("org", "n/a"))
+    kv("asn", data.get("as", "n/a"))
+
+
+def act_subdomains(target: str) -> None:
+    domain = norm_target(target)
+    header(f"subdomain enumeration - {domain}")
+    found = set()
+    resp = http_get(f"https://crt.sh/?q=%25.{domain}&output=json", timeout=45)
+    if resp is not None and resp.status_code == 200:
+        try:
+            for row in resp.json():
+                name = row.get("name_value", "")
+                for n in name.split("\n"):
+                    n = n.strip().lower()
+                    if n and n.endswith("." + domain) and "*" not in n:
+                        found.add(n)
+        except (json.JSONDecodeError, ValueError):
+            pass
+    resp = http_get(f"https://api.hackertarget.com/hostsearch/?q={domain}",
+                    timeout=15)
+    if resp is not None and resp.status_code == 200 and "error" not in resp.text.lower():
+        for line in resp.text.splitlines():
+            if line.strip():
+                sub = line.split(",")[0].strip().lower()
+                if sub.endswith("." + domain):
+                    found.add(sub)
+    if not found:
+        err(f"no subdomains found for {domain} (sources may be rate-limited)")
+        return
+    print()
+    w = max(len(s) for s in found)
+    for i, sub in enumerate(sorted(found), 1):
+        item(str(i), sub, dim=True, align=max(w, 8))
+    print()
+    note(f"{len(found)} subdomain(s) discovered for {domain}")
+
+
+def act_http_headers(target: str) -> None:
+    url = f"https://{norm_target(target)}"
+    try:
+        resp = REQ.get(url, timeout=10, allow_redirects=True)
+    except requests.RequestException:
+        try:
+            resp = REQ.get(f"http://{norm_target(target)}", timeout=10,
+                           allow_redirects=True)
+        except requests.RequestException:
+            err("connection failed")
+            return
+    print()
+    for key, value in resp.headers.items():
+        kv(key.lower(), value)
+    print()
+    kv("final url", resp.url)
+    kv("status", f"{resp.status_code} {resp.reason}")
+
+
+def act_robots(target: str) -> None:
+    base = f"https://{norm_target(target)}"
+    resp = http_get(f"{base}/robots.txt")
+    if resp is None or resp.status_code != 200:
+        resp = http_get(f"http://{norm_target(target)}/robots.txt")
+    if resp is None or resp.status_code != 200:
+        err("no robots.txt found (or server unreachable)")
+        return
+    print()
+    for line in resp.text.splitlines():
+        line = line.strip()
+        if line.lower().startswith("user-agent"):
+            print(f"\n  {YL}{line}{XX}")
+        elif line.lower().startswith(("disallow", "allow", "sitemap")):
+            kv(*[p.strip() for p in line.split(":", 1)])
+    print()
+
+
+def act_dns(target: str) -> None:
+    domain = norm_target(target)
+    header(f"dns records - {domain}")
+    rtypes = ["A", "AAAA", "MX", "NS", "TXT", "SOA", "CNAME"]
+    if HAS_DNS:
+        for rt in rtypes:
+            try:
+                ans = dns.resolver.resolve(domain, rt, lifetime=6)
+                vals = [r.to_text() for r in ans]
+                kv(rt.lower(), "; ".join(vals[:3]) + (" …" if len(vals) > 3 else ""))
+            except Exception:
+                kv(rt.lower(), "-")
     else:
-        pass
-        
+        out = sh(["nslookup", "-type=any", domain], timeout=15)
+        if not out.strip():
+            err("dns lookup failed - install dnspython or dnsutils")
+            return
+        for line in out.splitlines():
+            if line.strip():
+                print(f"  {DM}{line}{XX}")
+        note("tip: pip3 install dnspython for richer record typing")
+
+
+def act_reverse_dns(target: str) -> None:
+    ip = resolve_host(target)
+    if not ip:
+        err(f"could not resolve {target}")
+        return
+    try:
+        host, _, _ = socket.gethostbyaddr(ip)
+    except (socket.herror, socket.gaierror, OSError):
+        host = "n/a"
+    kv("ip", ip)
+    kv("ptr", host)
+
+
+def act_traceroute(target: str) -> None:
+    ip = resolve_host(target)
+    if not ip:
+        err(f"could not resolve {target}")
+        return
+    if tool_available("traceroute"):
+        out = sh(["traceroute", ip], timeout=90)
+        if out.strip():
+            for line in out.splitlines():
+                print(f"  {DM}{line}{XX}")
+            return
+    note("traceroute not installed - falling back to tcp hops via query")
+    resp = http_get(f"https://api.hackertarget.com/mtr/?q={ip}", timeout=30)
+    if resp is None or resp.status_code != 200 or "error" in resp.text.lower():
+        err("traceroute failed")
+        return
+    for line in resp.text.splitlines():
+        print(f"  {DM}{line}{XX}")
+
+
+def act_ports(target: str) -> None:
+    if not tool_available("nmap"):
+        err("nmap not installed - run setup.sh first")
+        return
+    ip = resolve_host(target)
+    if not ip:
+        err(f"could not resolve {target}")
+        return
+    endport = ask("end port [1000]").strip() or "1000"
+    if not endport.isdigit() or int(endport) > 65535 or int(endport) < 1:
+        err("invalid port, using 1000")
+        endport = "1000"
+    say(f"nmap scanning {ip} ports 1-{endport} (this can take a while)")
+    print()
+    out = sh(["nmap", "-vv", "-p", f"1-{endport}", "-T4", ip], timeout=600)
+    for line in out.splitlines():
+        if line.strip():
+            print(f"  {DM}{line}{XX}")
+
+
+def act_extract_links(target: str) -> None:
+    scheme = detect_scheme(norm_target(target))
+    resp = http_get(f"{scheme}://{norm_target(target)}")
+    if resp is None or resp.status_code != 200:
+        err("could not fetch page")
+        return
+    from bs4 import BeautifulSoup  # deferred - bs4 optional for other features
+    soup = BeautifulSoup(resp.text, "html.parser")
+    print()
+    seen = set()
+    count = 0
+    for a in soup.find_all("a", href=True):
+        href = a["href"].strip()
+        if not href or href.startswith(("#", "javascript:", "mailto:")):
+            continue
+        full = urljoin(resp.url, href)
+        if full in seen:
+            continue
+        seen.add(full)
+        count += 1
+        ext = "ext" if urlparse(full).netloc != urlparse(resp.url).netloc else "int"
+        item(str(count), full, ext, dim=True, align=5)
+        if count >= 60:
+            note("showing first 60 links - output truncated")
+            break
+    print()
+    note(f"{count} link(s) extracted from {resp.url}")
+
+
+def act_hidden_paths(target: str) -> None:
+    scheme = detect_scheme(norm_target(target))
+    base = f"{scheme}://{norm_target(target)}"
+    default_list = os.path.join(START, "core", "directories.txt")
+    path = ask("wordlist (enter for default)")
+    if not path:
+        path = default_list
+        note("default wordlist selected")
+    if not os.path.isfile(path):
+        err(f"wordlist not found: {path}")
+        return
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+            words = [w.strip().strip("/") for w in fh if w.strip()]
+    except OSError as exc:
+        err(f"cannot read wordlist: {exc}")
+        return
+    say(f"probing {len(words)} common paths on {base} (10 threads)")
+    print()
+    found = []
+    lock = threading.Lock()
+
+    def probe(word: str):
+        u = f"{base}/{word}"
+        try:
+            r = REQ.get(u, timeout=6, allow_redirects=False)
+            if r.status_code in (200, 301, 302, 401, 403):
+                with lock:
+                    found.append((u, r.status_code))
+        except requests.RequestException:
+            pass
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        futs = [pool.submit(probe, w) for w in words]
+        for _ in as_completed(futs):
+            pass
+    if not found:
+        err("no accessible paths found (or host blocks probing)")
+        return
+    w = max(len(u) for u, _ in found)
+    for u, code in sorted(found):
+        item(str(code), u, dim=True, align=max(w, 8))
+    print()
+    note(f"{len(found)} path(s) responded")
+
+
+def act_hash_crack() -> None:
+    target_hash = ask("hash to crack").strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{32,128}", target_hash):
+        err("not a valid hex hash (md5/sha-family expected)")
+        return
+    wordlist = ask("wordlist (enter for default)").strip()
+    if not wordlist:
+        wordlist = os.path.join(START, "core", "passwords.txt")
+        note("default wordlist selected")
+    if not os.path.isfile(wordlist):
+        err(f"wordlist not found: {wordlist}")
+        return
+    by_len = {32: "md5", 40: "sha1", 56: "sha224", 64: "sha256",
+              96: "sha384", 128: "sha512"}
+    algo = by_len.get(len(target_hash))
+    if not algo:
+        err(f"unsupported hash length {len(target_hash)} (md5/sha1/sha2 family)")
+        return
+    say(f"algorithm auto-detected: {algo}")
+    say(f"loading wordlist {wordlist}")
+    print()
+    tried = 0
+    try:
+        with open(wordlist, "r", encoding="latin-1") as fh:
+            for line in fh:
+                word = line.rstrip("\r\n")
+                tried += 1
+                if tried % 50000 == 0:
+                    print(f"\r  {DM}···· {tried} tried{XX}", end="", flush=True)
+                digest = hashlib.new(algo, word.encode()).hexdigest()
+                if digest == target_hash:
+                    print()
+                    print()
+                    kv("hash", target_hash)
+                    kv("algorithm", algo)
+                    kv("plaintext", word)
+                    print()
+                    return
+    except OSError as exc:
+        err(f"cannot read wordlist: {exc}")
+        return
+    print(f"\r  {' ' * 40}\r", end="")
+    err(f"not cracked after {tried} candidate(s) - try a bigger wordlist")
+
+
+def act_image_metadata() -> None:
+    path = ask("image path")
+    if not path:
+        return
+    if not os.path.isfile(path):
+        err(f"file not found: {path}")
+        return
+    if tool_available("exiftool"):
+        out = sh(["exiftool", path], timeout=30)
+        if out.strip():
+            for line in out.splitlines():
+                if ":" in line:
+                    k, v = line.split(":", 1)
+                    kv(k.strip().lower(), v.strip())
+            return
+    size = os.path.getsize(path)
+    with open(path, "rb") as fh:
+        data = fh.read()
+    kv("file", os.path.basename(path))
+    kv("size", f"{size:,} bytes")
+    md5 = hashlib.md5(data).hexdigest()
+    sha1 = hashlib.sha1(data).hexdigest()
+    kv("md5", md5)
+    kv("sha1", sha1)
+    note("install exiftool for full metadata extraction")
+
+
+def act_subnet(target: str) -> None:
+    if "/" not in target:
+        target = target + "/32"
+    try:
+        net = ipaddress.ip_network(target, strict=False)
+    except ValueError:
+        err(f"invalid ip/network: {target}")
+        return
+    hosts = net.num_addresses - 2 if net.prefixlen < 31 else net.num_addresses
+    kv("network", str(net))
+    kv("netmask", str(net.netmask))
+    kv("broadcast", str(net.broadcast_address))
+    kv("wildcard", str(net.hostmask))
+    kv("prefix", f"/{net.prefixlen}")
+    kv("host bits", str(net.max_prefixlen - net.prefixlen))
+    kv("max hosts", f"{hosts:,}")
+    if net.prefixlen <= 30:
+        kv("range", f"{net.network_address + 1} - {net.broadcast_address - 1}")
+    version = "ipv4" if net.version == 4 else "ipv6"
+    note(f"address family: {version}")
+
+
+def act_tls(target: str) -> None:
+    if not tool_available("sslscan"):
+        err("sslscan not installed - run setup.sh first")
+        return
+    host = norm_target(target)
+    say(f"sslscan {host} (may take ~30s)")
+    print()
+    out = sh(["sslscan", "--no-colour", host], timeout=120)
+    for line in out.splitlines():
+        if line.strip():
+            print(f"  {DM}{line}{XX}")
+
+
+def act_os_fingerprint(target: str) -> None:
+    if os.geteuid() != 0:
+        err("os fingerprinting needs root (nmap -O) - re-run with sudo")
+        return
+    if not tool_available("nmap"):
+        err("nmap not installed - run setup.sh first")
+        return
+    ip = resolve_host(target)
+    if not ip:
+        err(f"could not resolve {target}")
+        return
+    say(f"nmap -O {ip} (this can take a few minutes)")
+    print()
+    out = sh(["nmap", "-O", ip], timeout=600)
+    for line in out.splitlines():
+        if line.strip():
+            print(f"  {DM}{line}{XX}")
+
+
+def act_reverse_shell() -> None:
+    ip = ask("your listener ip")
+    port = ask("your listener port").strip()
+    if not ip or not port.isdigit():
+        err("valid ip and numeric port required")
+        return
+    template = os.path.join(START, "core", "reverse_shell.php")
+    if not os.path.isfile(template):
+        err(f"template missing: {template}")
+        return
+    try:
+        with open(template, "r", encoding="utf-8") as fh:
+            php = fh.read()
+    except OSError as exc:
+        err(f"cannot read template: {exc}")
+        return
+    php = php.replace("$ip = '127.0.0.1';", f"$ip = '{ip}';")
+    php = php.replace("$port = 1234;", f"$port = {port};")
+    out_path = os.path.join(os.getcwd(), "reverse-shell.php")
+    try:
+        with open(out_path, "w", encoding="utf-8") as fh:
+            fh.write(php)
+    except OSError as exc:
+        err(f"cannot write output: {exc}")
+        return
+    kv("file", out_path)
+    kv("listener", f"{ip}:{port}")
+    print()
+    note("start a handler first:  nc -lvnp " + port)
+    note("for authorized testing only - deploying this on systems you do")
+    note("not own is a crime in nearly every jurisdiction.")
+
+
+def act_deface_page() -> None:
+    say("authorized-use reminder: deface pages are for testing your OWN")
+    note("sites and demonstrating markup-injection impact in a pentest report.")
+    if not confirm("acknowledge and continue?"):
+        return
+    name = ask("hacker name").strip()
+    tagline = ask("tagline").strip()
+    message = ask("message").strip()
+    logo = ask("logo url or path (enter for default)").strip()
+    contact1 = ask("contact (email)").strip()
+    contact2 = ask("contact (social/other)").strip()
+    if not name:
+        err("name is required")
+        return
+    if not logo:
+        logo = "https://vritrasec.com/assets/all-images/logo.webp"
+        note("default logo selected")
+    template = os.path.join(START, "core", "deface.html")
+    if not os.path.isfile(template):
+        err(f"template missing: {template}")
+        return
+    try:
+        with open(template, "r", encoding="utf-8") as fh:
+            html = fh.read()
+    except OSError as exc:
+        err(f"cannot read template: {exc}")
+        return
+    for old, new in (("{{NAME}}", name), ("{{MESSAGE}}", message),
+                     ("{{LOGO}}", logo), ("{{TAGLINE}}", tagline),
+                     ("{{CONTACT}}", contact1), ("{{SOCIAL}}", contact2)):
+        html = html.replace(old, new)
+    out_path = os.path.join(os.getcwd(), "index.html")
+    try:
+        with open(out_path, "w", encoding="utf-8") as fh:
+            fh.write(html)
+    except OSError as exc:
+        err(f"cannot write output: {exc}")
+        return
+    kv("file", out_path)
+    kv("author", name)
+    print()
+    note("for testing your own sites only.")
+
+
+# -------------------------------------------------------------- menu layer
+
+
+RECON_ITEMS = [
+    ("01", "whois lookup", "domain registration + registrar"),
+    ("02", "ip lookup", "geolocation · isp · asn"),
+    ("03", "find subdomains", "crt.sh + hackertarget, merged"),
+    ("04", "http headers", "server response header dump"),
+    ("05", "robots scanner", "robots.txt disallow map"),
+    ("06", "dns lookup", "a · aaaa · mx · ns · txt · soa"),
+    ("07", "reverse dns", "ptr record for an ip"),
+    ("08", "traceroute", "network path to target"),
+    ("09", "port scan", "nmap tcp scan (1-N)"),
+    ("10", "extract links", "crawl a page, list every url"),
+    ("11", "hidden paths", "dir/file probing via wordlist"),
+    ("12", "crack hash", "md5/sha wordlist recovery"),
+    ("13", "image metadata", "exif dump for a local file"),
+    ("14", "subnet lookup", "cidr → mask · range · hosts"),
+    ("15", "tls scan", "sslscan cipher/cert report"),
+    ("16", "os fingerprint", "nmap -O (root required)"),
+    ("17", "reverse shell", "generate php payload file"),
+    ("18", "deface page", "generate demo html template"),
+]
+
+
+def _do_recon(num: str, target: str | None = None) -> None:
+    """run one recon module with a target prompt and error containment."""
+    if num == "12":
+        header("crack hash")
+        act_hash_crack()
+        print()
+        return
+    if num == "13":
+        header("image metadata")
+        act_image_metadata()
+        print()
+        return
+    if num == "17":
+        header("reverse shell generator")
+        act_reverse_shell()
+        print()
+        return
+    if num == "18":
+        header("deface page generator")
+        act_deface_page()
+        print()
+        return
+
+    if target is None:
+        raw = ask("target (domain or ip)").strip()
+    else:
+        raw = target.strip()
+        say(f"target: {raw}")
+    if not raw:
+        err("empty target - cancelled")
+        return
+    # subnet lookup keeps CIDR notation intact (10.0.0.0/24)
+    target = raw if num == "14" else norm_target(raw)
+    if num in ("09", "15", "16"):
+        if not is_ip(target) and resolve_host(target) is None:
+            err(f"cannot resolve {target}")
+            return
+    print()
+    try:
+        if num == "01":
+            act_whois(target)
+        elif num == "02":
+            act_ipinfo(target)
+        elif num == "03":
+            act_subdomains(target)
+        elif num == "04":
+            act_http_headers(target)
+        elif num == "05":
+            act_robots(target)
+        elif num == "06":
+            act_dns(target)
+        elif num == "07":
+            act_reverse_dns(target)
+        elif num == "08":
+            act_traceroute(target)
+        elif num == "09":
+            act_ports(target)
+        elif num == "10":
+            act_extract_links(target)
+        elif num == "11":
+            act_hidden_paths(target)
+        elif num == "14":
+            act_subnet(target)
+        elif num == "15":
+            act_tls(target)
+        elif num == "16":
+            act_os_fingerprint(target)
+    except requests.RequestException as e:
+        err(f"network error: {e.__class__.__name__}")
+    except Exception as e:  # module isolation - menu must survive anything
+        err(f"{e.__class__.__name__}: {e}")
+    print()
+
+
+def act_about() -> None:
+    header("about")
+    kv("tool", f"KalnemiX v{__version__}")
+    kv("type", "web recon & osint toolkit")
+    kv("modules", f"{len(RECON_ITEMS)} recon aids + 2 generators")
+    kv("network", "public osint sources + local nmap/sslscan")
+    kv("license", "boost software license 1.0")
+    print()
+    kv("dev", "MrHacker-X")
+    kv("github", "github.com/MrHacker-X")
+    kv("email", "contact@vritrasec.com")
+    kv("website", "vritrasec.com")
+    kv("link", "link.vritrasec.com")
+    print()
+    print(f"  {DM}recon only - no exploitation. test only what you own or{XX}")
+    print(f"  {DM}have written permission to test.{XX}")
+    print()
+
+
+MENU_ACTIONS = {
+    "01": "whois lookup",
+    "02": "ip lookup",
+    "03": "find subdomains",
+    "04": "http headers",
+    "05": "robots scanner",
+    "06": "dns lookup",
+    "07": "reverse dns",
+    "08": "traceroute",
+    "09": "port scan",
+    "10": "extract links",
+    "11": "hidden paths",
+    "12": "crack hash",
+    "13": "image metadata",
+    "14": "subnet lookup",
+    "15": "tls scan",
+    "16": "os fingerprint",
+    "17": "reverse shell",
+    "18": "deface page",
+}
+
+
+def main_menu() -> None:
+    w = max(len(label) for _, label, _ in RECON_ITEMS)
+    for num, label, desc in RECON_ITEMS:
+        item(num, label, desc, align=w)
+    item("a", "about", "tool · maker · license", dim=True, align=w)
+    item("0", "exit", "", dim=True, align=w)
+    ch = ask("module").lower()
+    if ch == "0":
+        raise SafeExit
+    if ch.isdigit():
+        ch = ch.zfill(2)  # accept 1..9 as 01..09
+    if ch == "a":
+        act_about()
+        pause()
+        return
+    if ch in MENU_ACTIONS:
+        _do_recon(ch)
+        pause()
+        return
+    print(f"  {DM}invalid choice{XX}\n")
+
+
+def check_env() -> list:
+    """return a list of (name, ok, note) for optional externals."""
+    checks = [
+        ("whois", tool_available("whois"), "or rdap fallback will be used"),
+        ("nmap", tool_available("nmap"), "needed for port scan + os fingerprint"),
+        ("sslscan", tool_available("sslscan"), "needed for tls scan"),
+        ("traceroute", tool_available("traceroute"), "or a web fallback is used"),
+        ("exiftool", tool_available("exiftool"), "or a basic fallback is used"),
+        ("bs4", True, ""),  # filled below
+    ]
+    try:
+        import bs4  # noqa: F401
+        checks[-1] = ("bs4", True, "needed for extract links")
+    except ImportError:
+        checks[-1] = ("bs4", False, "needed for extract links")
+    try:
+        import dns.resolver  # noqa: F401
+        checks.append(("dnspython", True, "richer dns records"))
+    except ImportError:
+        checks.append(("dnspython", False, "nslookup fallback will be used"))
+    return checks
+
+
+def cmd_doctor() -> None:
+    header(f"environment check - {PROG} v{__version__}")
+    kv("python", sys.version.split()[0])
+    kv("platform", sys.platform)
+    for name, ok, hint in check_env():
+        mark = "ok " if ok else "missing"
+        val = f"{mark}" + (f"  {DM}···· {hint}{XX}" if hint else "")
+        kv(name, val)
+    print()
+
+
+def cmd_setup_check() -> int:
+    missing = [n for n, ok, _ in check_env() if not ok]
+    if missing:
+        err("missing: " + ", ".join(missing))
+        print()
+        note("run ./setup.sh to install everything")
+        return 1
+    say("all dependencies present")
+    return 0
+
+
+# -------------------------------------------------------------------- cli --
+
+
+def cli(args) -> int:
+    if args.doctor:
+        cmd_doctor()
+        return 0
+    if args.check:
+        return cmd_setup_check()
+
+    if args.module:
+        m = args.module.zfill(2)
+        if m not in MENU_ACTIONS:
+            print(f"  {DM}unknown module '{args.module}' - valid: "
+                  f"{'-'.join(k.lstrip('0') or '0' for k in MENU_ACTIONS)}{XX}")
+            return 2
+        try:
+            _do_recon(m, target=args.target)
+        except SafeExit:
+            print(f"  {DM}safe exit - recon responsibly.{XX}\n")
+            return 0
+        except KeyboardInterrupt:
+            print(f"\n  {DM}safe exit - recon responsibly.{XX}\n")
+            return 130
+        return 0
+
+    while True:
+        try:
+            banner()
+            main_menu()
+        except SafeExit:
+            print(f"  {DM}safe exit - recon responsibly.{XX}\n")
+            return 0
+        except KeyboardInterrupt:
+            print(f"\n  {DM}safe exit - recon responsibly.{XX}\n")
+            return 130
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        prog=PROG,
+        description="KalnemiX - web recon & osint toolkit. "
+                    "Authorized testing only.")
+    parser.add_argument("-m", "--module", metavar="N",
+                        help="run one module directly (1-18)")
+    parser.add_argument("-t", "--target", metavar="TARGET",
+                        help="target for --module (skips the prompt)")
+    parser.add_argument("--doctor", action="store_true",
+                        help="show environment/dependency status and exit")
+    parser.add_argument("--check", action="store_true",
+                        help="exit 0 if all deps present, 1 otherwise")
+    parser.add_argument("-v", "--version", action="version",
+                        version=f"{PROG} {__version__}")
+    args = parser.parse_args()
+    try:
+        sys.exit(cli(args))
+    except SafeExit:
+        print(f"  {DM}safe exit - recon responsibly.{XX}\n")
+        sys.exit(0)
+    except KeyboardInterrupt:
+        print(f"\n  {DM}safe exit - recon responsibly.{XX}\n")
+        sys.exit(130)
+
+
+if __name__ == "__main__":
+    main()
