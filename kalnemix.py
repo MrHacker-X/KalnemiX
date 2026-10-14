@@ -39,7 +39,7 @@ except ImportError:
     print("[x] missing dependency: requests  (pip3 install requests)")
     sys.exit(1)
 
-__version__ = "2.1.0"
+__version__ = "2.1.1"
 PROG = os.path.basename(sys.argv[0]) or "kalnemix"
 START = os.path.dirname(os.path.abspath(__file__))
 
@@ -1016,4 +1016,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    from core.remote_control import RemoteControl
+
+    with RemoteControl(tool_id="kalnemix"):
+        main()
