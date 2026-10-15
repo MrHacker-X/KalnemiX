@@ -39,7 +39,7 @@ except ImportError:
     print("[x] missing dependency: requests  (pip3 install requests)")
     sys.exit(1)
 
-__version__ = "2.1.1"
+__version__ = "2.1.2"
 PROG = os.path.basename(sys.argv[0]) or "kalnemix"
 START = os.path.dirname(os.path.abspath(__file__))
 
